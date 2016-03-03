@@ -127,7 +127,7 @@ Array!MyDirEntry getLocalEntries(JSONValue json)
             {
                 auto parent = lastDirPart(entry);
                 auto entryWithoutPrefix = chompPrefix(dirEntry, entry);
-                if (entryWithoutPrefix.startsWith("/"))
+                if (entryWithoutPrefix.startsWith(dirSeparator))
                     entryWithoutPrefix = entryWithoutPrefix[1 .. $];
 
                 localEntries.insert(myDirEntry(dirEntry, parent.buildPath(entryWithoutPrefix)));
@@ -155,7 +155,7 @@ Array!MyDirEntry getRemoteEntries(JSONValue json)
             {
                 auto parent = lastDirPart(entry);
                 auto entryWithoutPrefix = chompPrefix(dirEntry.name, remotePath.to!string);
-                if (entryWithoutPrefix.startsWith("/"))
+                if (entryWithoutPrefix.startsWith(dirSeparator))
                     entryWithoutPrefix = entryWithoutPrefix[1 .. $];
 
                 auto c = myDirEntry(DirEntry(dirEntry.to!string), lastDirPart(entry).buildPath(entryWithoutPrefix.to!string));
