@@ -40,7 +40,15 @@ void main()
 
 auto utcTimeZone()
 {
-    return TimeZone.getTimeZone("UTC");
+
+    version (Posix)
+    {
+        return TimeZone.getTimeZone("UTC");
+    }
+    version (Windows)
+    {
+        return TimeZone.getTimeZone("Etc/GMT");
+    }
 }
 
 SysTime getNextTimeToRun() @safe
@@ -60,6 +68,7 @@ string dropboxDirectory()
 {
     import std.file : chdir;
     import std.path : expandTilde;
+    import std.exception : enforce;
 
     version (Posix)
     {
@@ -67,8 +76,14 @@ string dropboxDirectory()
     }
     version (Windows)
     {
-        auto username = GetUserName();
-        return "C:\\Users\\" ~ username ~ "\\Dropbox";
+        import core.sys.windows.windows;
+
+        wchar[64] buffer;
+        DWORD len = buffer.sizeof;
+
+        enforce(GetUserName(buffer.ptr, &len) != 0, "Failed to get user name. Error code: " ~ GetLastError().to!string);
+
+        return "C:\\Users\\" ~ buffer[0..len - 1].to!string ~ "\\Dropbox";
     }
 }
 
