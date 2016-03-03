@@ -58,7 +58,7 @@ SysTime getNextTimeToRun() @safe
     auto timeToRun = currentTime;
 
     timeToRun.second = 0;
-    timeToRun.minute = timeToRun.minute + 1;
+    timeToRun.minute = (timeToRun.minute + 1) % 60;
     timeToRun.fracSecs = dur!"nsecs"(0);
 
     return timeToRun;
