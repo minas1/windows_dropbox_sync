@@ -5,3 +5,6 @@ __dummy.html
 *.obj
 *.log
 *~
+*.iml
+.idea/
+windows_dropbox_sync
