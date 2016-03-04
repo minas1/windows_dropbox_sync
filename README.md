@@ -34,7 +34,7 @@ For example, with the following configuration, your _downloads_ and _music_ fold
 
 ##### Notes
 * You need to set the correct paths for your account.
-* Backslashes (the "\\" character) must appear twice (i.e. "C:\\Users\\...")
+* Backslashes (the "\\" character) must appear twice (i.e. "C:\\\\Users\\\\...")
 
 # License
 This project uses GPLv3.
