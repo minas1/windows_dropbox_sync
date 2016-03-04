@@ -7,15 +7,19 @@ The solution recommended by Dropbox is to move your folders _inside_ the dropbox
 
 _Windows Dropbox Sync_ aims to solve this. You can configure folders / files to watch and it will **copy** them to your local dropbox folder. The dropbox service will take care of uploading the data to your dropbox account.
 
+The application monitors your folders at the beginning of every minute.
+
 ## Build
-To build the project from source, you need to have **dub** installed. If you don't, you can install it by following [these instructions](http://minas-mina.com/2015/08/16/installing-dub/).
+### Requirements
+* [dub](http://minas-mina.com/2015/08/16/installing-dub/)
+* [DMD v2.070.0+](https://dlang.org/download.html#dmd) (or any other based on 2.070.0+ library)
 
 To build the project, open a terminal inside the project's root directory and execute
 ```
 dub build
 ```
 ## Configuration
-To configure which files / folders should be monitor edit "conf.json".
+To configure which files / folders should be monitored edit "conf.json".
 
 For example, with the following configuration, your _downloads_ and _music_ folders will be synchronized.
 
@@ -28,8 +32,9 @@ For example, with the following configuration, your _downloads_ and _music_ fold
 }
 ```
 
-##### Note
-You need to set the correct paths for your account.
+##### Notes
+* You need to set the correct paths for your account.
+* Backslashes (the "\\" character) must appear twice (i.e. "C:\\Users\\...")
 
 # License
 This project uses GPLv3.
