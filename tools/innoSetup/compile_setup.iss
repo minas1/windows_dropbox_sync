@@ -34,7 +34,6 @@ Source: "..\..\source\*"; DestDir: "{app}\source"; Flags: ignoreversion recurses
 
 [Icons]
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\windows_dropbox_sync.exe";
 Name: "{commonstartup}\{#MyAppName}"; Filename: "{app}\windows_dropbox_sync.exe";
 
 [Run]
