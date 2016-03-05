@@ -8,3 +8,5 @@ __dummy.html
 *.iml
 .idea/
 windows_dropbox_sync
+windows_dropbox_sync.exe
+tools/innoSetup/Output
