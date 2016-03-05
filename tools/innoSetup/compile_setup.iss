@@ -4,6 +4,7 @@
 #define MyAppName "Windows Dropbox Sync"
 #define MyAppVersion "0.1.0"
 #define MyAppPublisher "Minas Mina"
+#define MyAppExeName "windows_dropbox_sync.exe"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
@@ -35,3 +36,6 @@ Source: "..\..\source\*"; DestDir: "{app}\source"; Flags: ignoreversion recurses
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\windows_dropbox_sync.exe";
 Name: "{commonstartup}\{#MyAppName}"; Filename: "{app}\windows_dropbox_sync.exe";
+
+[Run]
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
