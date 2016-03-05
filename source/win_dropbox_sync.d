@@ -37,8 +37,15 @@ shared static this()
 {
     MultiLogger logger = new MultiLogger();
 
-    logger.insertLogger("default", new FileLogger(stderr));
-    logger.insertLogger("file", new FileLogger("win_dropbox_sync.log"));
+    version (Windows)
+    {
+        logger.insertLogger("file", new FileLogger("win_dropbox_sync.log"));
+    }
+    else
+    {
+        logger.insertLogger("default", new FileLogger(stderr));
+        logger.insertLogger("file", new FileLogger("win_dropbox_sync.log"));
+    }
 
     sharedLog = logger;
 }
