@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Windows Dropbox Sync"
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.1.2"
 #define MyAppPublisher "Minas Mina"
 #define MyAppExeName "windows_dropbox_sync.exe"
 
@@ -26,7 +26,6 @@ SolidCompression=yes
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "..\..\conf.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\LICENSE.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\windows_dropbox_sync.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\source\*"; DestDir: "{app}\source"; Flags: ignoreversion recursesubdirs

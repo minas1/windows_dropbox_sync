@@ -12,6 +12,8 @@ string userHomeDirectory()
     version (Windows)
     {
         import core.sys.windows.windows;
+        import std.exception;
+        import std.conv;
 
         wchar[64] buffer;
         DWORD len = buffer.sizeof;
