@@ -28,6 +28,9 @@ import std.conv;
 import std.path;
 import std.string : chompPrefix;
 import std.experimental.logger;
+import std.array;
+
+import utils;
 
 immutable CONFIG_FILE = "conf.json";
 
@@ -35,16 +38,18 @@ SysTime[string] lastSyncTimes;
 
 shared static this()
 {
+    mkdirRecurse(applicationLocalDirectory());
+
     MultiLogger logger = new MultiLogger();
 
     version (Windows)
     {
-        logger.insertLogger("file", new FileLogger("win_dropbox_sync.log"));
+        logger.insertLogger("file", new FileLogger(applicationLocalDirectory().chainPath("win-dropbox-sync.log").array));
     }
     else
     {
         logger.insertLogger("default", new FileLogger(stderr));
-        logger.insertLogger("file", new FileLogger("win_dropbox_sync.log"));
+        logger.insertLogger("file", new FileLogger(applicationLocalDirectory().chainPath("win-dropbox-sync.log").array));
     }
 
     sharedLog = logger;
@@ -54,14 +59,13 @@ void main()
 {
     while (true)
     {
-        sync(Clock.currTime(utcTimeZone()));
-        Thread.sleep(getNextTimeToRun() - Clock.currTime(utcTimeZone()));
+        sync(Clock.currTime(utcTimeZone));
+        Thread.sleep(getNextTimeToRun() - Clock.currTime(utcTimeZone));
     }
 }
 
-auto utcTimeZone()
+auto utcTimeZone() @property
 {
-
     version (Posix)
     {
         return TimeZone.getTimeZone("UTC");
@@ -83,29 +87,6 @@ SysTime getNextTimeToRun() @safe
     timeToRun.fracSecs = dur!"nsecs"(0);
 
     return timeToRun;
-}
-
-string dropboxDirectory()
-{
-    import std.file : chdir;
-    import std.path : expandTilde;
-    import std.exception : enforce;
-
-    version (Posix)
-    {
-        return expandTilde("~/Dropbox");
-    }
-    version (Windows)
-    {
-        import core.sys.windows.windows;
-
-        wchar[64] buffer;
-        DWORD len = buffer.sizeof;
-
-        enforce(GetUserName(buffer.ptr, &len) != 0, "Failed to get user name. Error code: " ~ GetLastError().to!string);
-
-        return "C:\\Users\\" ~ buffer[0..len - 1].to!string ~ "\\Dropbox";
-    }
 }
 
 struct MyDirEntry
@@ -307,5 +288,16 @@ auto getConfiguration()
     import std.json : parseJSON;
     import std.file : readText;
 
-    return parseJSON(readText(CONFIG_FILE));
+    auto configFilePath = applicationLocalDirectory().chainPath(CONFIG_FILE).array;
+
+    if (!exists(configFilePath) || !isFile(configFilePath))
+    {
+        auto file = File(configFilePath, "w");
+        file.writeln("{");
+        file.writeln("  \"directories-to-watch\": [");
+        file.writeln("  ]");
+        file.writeln("}");
+    }
+
+    return parseJSON(readText(configFilePath));
 }
