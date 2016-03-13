@@ -171,6 +171,20 @@ Array!MyDirEntry getRemoteEntries(JSONValue json)
     return remoteEntries;
 }
 
+version (Windows)
+{
+    void removeReadOnlyAttributes(string local, string remote)
+    {
+        import core.sys.windows.windows;
+
+        auto attributes = getAttributes(local);
+
+        // if the file / folder is read-only, we must copy it as non read-only so it can be edited / deleted if it needs to
+        if ((attributes & FILE_ATTRIBUTE_READONLY) == 1)
+            setAttributes(remote, attributes & ~FILE_ATTRIBUTE_READONLY);
+    }
+}
+
 /**
  * Synchronizes from local entries to remote entries. This synchronizes files that were added (new files)
  * and files that were modified (updated). It does not handle files that were deleted.
@@ -195,15 +209,7 @@ void syncNewOrUpdatedEntries(SysTime currentTime, Array!MyDirEntry localEntries,
             // On Windows the attributes are preserved (i.e a read-only file will remain read-only),
             // so it must be changed. On Linux, they are not, so we are fine.
             version (Windows)
-            {
-                import core.sys.windows.windows;
-
-                auto attributes = getAttributes(localEntry.name);
-
-                // if the file / folder is read-only, we must copy it as non read-only so it can be edited / deleted if it needs to
-                if ((attributes & FILE_ATTRIBUTE_READONLY) == 1)
-                    setAttributes(entryToMake, attributes & ~FILE_ATTRIBUTE_READONLY);
-            }
+                removeReadOnlyAttributes(localEntry.name, entryToMake);
 
             info("Created ", entryToMake);
             lastSyncTimes[localEntry.relPath] = currentTime;
@@ -227,6 +233,9 @@ void syncNewOrUpdatedEntries(SysTime currentTime, Array!MyDirEntry localEntries,
                     auto entryToMake = to!string(dropboxDirectory().chainPath(localEntry.relPath));
 
                     copy(localEntry.name, entryToMake);
+                    version (Windows)
+                        removeReadOnlyAttributes(localEntry.name, entryToMake);
+                        
                     info("Updated ", entryToMake);
                 }
             }
@@ -237,6 +246,9 @@ void syncNewOrUpdatedEntries(SysTime currentTime, Array!MyDirEntry localEntries,
                     auto entryToMake = to!string(dropboxDirectory().chainPath(localEntry.relPath));
                     copy(localEntry.name, entryToMake);
 
+                    version (Windows)
+                        removeReadOnlyAttributes(localEntry.name, entryToMake);
+                
                     info("Copied ", localEntry.name);
                 }
 
