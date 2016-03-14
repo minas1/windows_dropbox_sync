@@ -30,6 +30,7 @@ import std.string : chompPrefix;
 import std.experimental.logger;
 import std.array;
 
+import myDirEntry : MyDirEntry, myDirEntry;
 import utils;
 
 immutable CONFIG_FILE = "conf.json";
@@ -89,37 +90,15 @@ SysTime getNextTimeToRun() @safe
     return timeToRun;
 }
 
-struct MyDirEntry
-{
-    auto opCmp(const ref MyDirEntry other) const pure nothrow
-    {
-        if (fullPath.name < other.fullPath.name)
-            return -1;
-        else if (fullPath.name == other.fullPath.name)
-            return 0;
-        return 1;
-    }
-
-    alias fullPath this;
-
-    DirEntry fullPath;
-    string relPath;
-}
-
-auto myDirEntry(DirEntry fullPath, string relPath)
-{
-    MyDirEntry e;
-    e.fullPath = fullPath;
-    e.relPath = relPath;
-    return e;
-}
-
 Array!MyDirEntry getLocalEntries(JSONValue json)
 {
     Array!MyDirEntry localEntries;
 
     foreach (entry; json["directories-to-watch"].array.map!(dir => to!string(dir.str)))
     {
+        version (Windows)
+            entry = `\\?\` ~ entry;
+        
         // local
         if (exists(entry))
         {
@@ -127,6 +106,8 @@ Array!MyDirEntry getLocalEntries(JSONValue json)
 
             foreach (dirEntry; dirEntries(entry, SpanMode.depth))
             {
+                dirEntry = DirEntry(dirEntry.name);
+
                 auto parent = lastDirPart(entry);
                 auto entryWithoutPrefix = chompPrefix(dirEntry, entry);
                 if (entryWithoutPrefix.startsWith(dirSeparator))
@@ -148,6 +129,9 @@ Array!MyDirEntry getRemoteEntries(JSONValue json)
 
     foreach (entry; json["directories-to-watch"].array.map!(dir => to!string(dir.str)))
     {
+        version (Windows)
+            entry = `\\?\` ~ entry;
+        
         // remote
         auto remotePath = dropboxDirectory().chainPath(lastDirPart(entry));
         if (exists(remotePath))
@@ -204,14 +188,13 @@ void syncNewOrUpdatedEntries(SysTime currentTime, Array!MyDirEntry localEntries,
             if (localEntry.isDir)
                 mkdir(entryToMake);
             else
-                copy(localEntry.name, entryToMake);
+                copy(localEntry, entryToMake);
 
-            // On Windows the attributes are preserved (i.e a read-only file will remain read-only),
-            // so it must be changed. On Linux, they are not, so we are fine.
             version (Windows)
                 removeReadOnlyAttributes(localEntry.name, entryToMake);
 
             info("Created ", entryToMake);
+
             lastSyncTimes[localEntry.relPath] = currentTime;
         }
         else // if it exists in the remote folder
