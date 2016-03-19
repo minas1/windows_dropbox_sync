@@ -178,70 +178,78 @@ void syncNewOrUpdatedEntries(SysTime currentTime, Array!MyDirEntry localEntries,
 {
     for (size_t i = 0; i < localEntries.length; ++i)
     {
-        auto localEntry = localEntries[i];
-        auto res = remoteEntries[].map!(e => e.relPath).find(localEntry.relPath);
-
-        // if it does not exist in the remote folder, copy it there
-        if (res.empty)
+        try
         {
-            auto entryToMake = to!string(dropboxDirectory().chainPath(localEntry.relPath));
-
-            if (localEntry.isDir)
-                mkdir(entryToMake);
-            else
-                copy(localEntry, entryToMake);
-
-            version (Windows)
-                removeReadOnlyAttributes(localEntry.name, entryToMake);
-
-            info("Created ", entryToMake);
-
-            lastSyncTimes[localEntry.relPath] = currentTime;
-        }
-        else // if it exists in the remote folder
-        {
-            SysTime accessTime, modificationTime;
-
-            getTimes(localEntry, accessTime, modificationTime);
-            modificationTime.timezone = utcTimeZone(); // convert from local time to UTC
-
-            auto lastSyncTime = res.front in lastSyncTimes;
-
-            if (lastSyncTime !is null)
-            {
-                // If the file was modified since last run (and it's not a directory), check if an update is needed.
-                // Directories are modified when their content changes. However, there's no need to do anything here
-                // because the files that were deleted will be handled.
-                if (modificationTime > *lastSyncTime && localEntry.isFile)
-                {
-                    auto entryToMake = to!string(dropboxDirectory().chainPath(localEntry.relPath));
-
-                    copy(localEntry.name, entryToMake);
-                    version (Windows)
-                        removeReadOnlyAttributes(localEntry.name, entryToMake);
-                        
-                    info("Updated ", entryToMake);
-                }
-            }
-            else
-            {
-                if (localEntry.isFile)
-                {
-                    auto entryToMake = to!string(dropboxDirectory().chainPath(localEntry.relPath));
-                    copy(localEntry.name, entryToMake);
-
-                    version (Windows)
-                        removeReadOnlyAttributes(localEntry.name, entryToMake);
                 
-                    info("Copied ", localEntry.name);
+            auto localEntry = localEntries[i];
+            auto res = remoteEntries[].map!(e => e.relPath).find(localEntry.relPath);
+
+            // if it does not exist in the remote folder, copy it there
+            if (res.empty)
+            {
+                auto entryToMake = to!string(dropboxDirectory().chainPath(localEntry.relPath));
+
+                if (localEntry.isDir)
+                    mkdir(entryToMake);
+                else
+                    copy(localEntry, entryToMake);
+
+                version (Windows)
+                    removeReadOnlyAttributes(localEntry.name, entryToMake);
+
+                info("Created ", entryToMake);
+
+                lastSyncTimes[localEntry.relPath] = currentTime;
+            }
+            else // if it exists in the remote folder
+            {
+                SysTime accessTime, modificationTime;
+
+                getTimes(localEntry, accessTime, modificationTime);
+                modificationTime.timezone = utcTimeZone(); // convert from local time to UTC
+
+                auto lastSyncTime = res.front in lastSyncTimes;
+
+                if (lastSyncTime !is null)
+                {
+                    // If the file was modified since last run (and it's not a directory), check if an update is needed.
+                    // Directories are modified when their content changes. However, there's no need to do anything here
+                    // because the files that were deleted will be handled.
+                    if (modificationTime > *lastSyncTime && localEntry.isFile)
+                    {
+                        auto entryToMake = to!string(dropboxDirectory().chainPath(localEntry.relPath));
+
+                        copy(localEntry.name, entryToMake);
+                        version (Windows)
+                            removeReadOnlyAttributes(localEntry.name, entryToMake);
+                            
+                        info("Updated ", entryToMake);
+                    }
+                }
+                else
+                {
+                    if (localEntry.isFile)
+                    {
+                        auto entryToMake = to!string(dropboxDirectory().chainPath(localEntry.relPath));
+                        copy(localEntry.name, entryToMake);
+
+                        version (Windows)
+                            removeReadOnlyAttributes(localEntry.name, entryToMake);
+                    
+                        info("Copied ", localEntry.name);
+                    }
+
+                    // If localEntry is a directory, it means that it already exists in the remote folder.
+                    // There's nothing to be done in that case.
+                    // This happens when the application starts and a folder is already there.
                 }
 
-                // If localEntry is a directory, it means that it already exists in the remote folder.
-                // There's nothing to be done in that case.
-                // This happens when the application starts and a folder is already there.
+                lastSyncTimes[localEntry.relPath] = currentTime;
             }
-
-            lastSyncTimes[localEntry.relPath] = currentTime;
+        }
+        catch (FileException e)
+        {
+            warning(e);
         }
     }
 }
