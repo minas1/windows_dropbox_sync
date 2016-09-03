@@ -85,7 +85,7 @@ SysTime getNextTimeToRun() @safe
 
     timeToRun.second = 0;
     timeToRun.fracSecs = dur!"nsecs"(0);
-    
+
     timeToRun += dur!"minutes"(1);
 
     return timeToRun;
@@ -99,7 +99,7 @@ Array!MyDirEntry getLocalEntries(JSONValue json)
     {
         version (Windows)
             entry = `\\?\` ~ entry;
-        
+
         // local
         if (exists(entry))
         {
@@ -132,7 +132,7 @@ Array!MyDirEntry getRemoteEntries(JSONValue json)
     {
         version (Windows)
             entry = `\\?\` ~ entry;
-        
+
         // remote
         auto remotePath = dropboxDirectory().chainPath(lastDirPart(entry));
         if (exists(remotePath))
@@ -178,9 +178,11 @@ void syncNewOrUpdatedEntries(SysTime currentTime, Array!MyDirEntry localEntries,
 {
     for (size_t i = 0; i < localEntries.length; ++i)
     {
+        version (Windows)
+            core.sys.windows.windows.SetConsoleTitle((to!wstring(i * 100.0 / localEntries.length) ~ "%").ptr);
+        
         try
         {
-                
             auto localEntry = localEntries[i];
             auto res = remoteEntries[].map!(e => e.relPath).find(localEntry.relPath);
 
@@ -222,7 +224,7 @@ void syncNewOrUpdatedEntries(SysTime currentTime, Array!MyDirEntry localEntries,
                         copy(localEntry.name, entryToMake);
                         version (Windows)
                             removeReadOnlyAttributes(localEntry.name, entryToMake);
-                            
+
                         info("Updated ", entryToMake);
                     }
                 }
@@ -231,12 +233,22 @@ void syncNewOrUpdatedEntries(SysTime currentTime, Array!MyDirEntry localEntries,
                     if (localEntry.isFile)
                     {
                         auto entryToMake = to!string(dropboxDirectory().chainPath(localEntry.relPath));
-                        copy(localEntry.name, entryToMake);
-
-                        version (Windows)
-                            removeReadOnlyAttributes(localEntry.name, entryToMake);
                     
-                        info("Copied ", localEntry.name);
+                        // read the notification time of the file in the remote directory.
+                        // if it's older than the local one, replace it.
+                        SysTime remoteAccessTime, remoteModificationTime;
+                        getTimes(entryToMake, remoteAccessTime, remoteModificationTime);
+                        remoteModificationTime.timezone = utcTimeZone(); // convert from local time to UTC
+                
+                        if (modificationTime > remoteModificationTime)
+                        {
+                            copy(localEntry.name, entryToMake);
+
+                            version (Windows)
+                                removeReadOnlyAttributes(localEntry.name, entryToMake);
+
+                            info("Copied ", localEntry.name);
+                        }
                     }
 
                     // If localEntry is a directory, it means that it already exists in the remote folder.
@@ -307,7 +319,7 @@ auto getConfiguration()
     import std.json : parseJSON;
     import std.file : readText;
 
-    auto configFilePath = applicationLocalDirectory().chainPath(CONFIG_FILE).array;
+    auto configFilePath = CONFIG_FILE; //applicationLocalDirectory().chainPath(CONFIG_FILE).array;
 
     if (!exists(configFilePath) || !isFile(configFilePath))
     {
