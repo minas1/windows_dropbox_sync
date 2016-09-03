@@ -178,9 +178,6 @@ void syncNewOrUpdatedEntries(SysTime currentTime, Array!MyDirEntry localEntries,
 {
     for (size_t i = 0; i < localEntries.length; ++i)
     {
-        version (Windows)
-            core.sys.windows.windows.SetConsoleTitle((to!wstring(i * 100.0 / localEntries.length) ~ "%").ptr);
-        
         try
         {
             auto localEntry = localEntries[i];
