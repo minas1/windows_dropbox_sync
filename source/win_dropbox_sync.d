@@ -35,8 +35,6 @@ import utils;
 
 immutable CONFIG_FILE = "conf.json";
 
-SysTime[string] lastSyncTimes;
-
 shared static this()
 {
     mkdirRecurse(applicationLocalDirectory());
@@ -176,15 +174,18 @@ version (Windows)
  */
 void syncNewOrUpdatedEntries(SysTime currentTime, Array!MyDirEntry localEntries, Array!MyDirEntry remoteEntries)
 {
-    for (size_t i = 0; i < localEntries.length; ++i)
+    bool[string] remoteEntriesRelativePaths;
+    foreach (remoteEntry; remoteEntries)
+        remoteEntriesRelativePaths[remoteEntry.relPath] = true;
+
+    foreach (localEntry; localEntries)
     {
         try
         {
-            auto localEntry = localEntries[i];
-            auto res = remoteEntries[].map!(e => e.relPath).find(localEntry.relPath);
+            auto res = localEntry.relPath in remoteEntriesRelativePaths;
 
             // if it does not exist in the remote folder, copy it there
-            if (res.empty)
+            if (res is null)
             {
                 auto entryToMake = to!string(dropboxDirectory().chainPath(localEntry.relPath));
 
@@ -197,63 +198,38 @@ void syncNewOrUpdatedEntries(SysTime currentTime, Array!MyDirEntry localEntries,
                     removeReadOnlyAttributes(localEntry.name, entryToMake);
 
                 info("Created ", entryToMake);
-
-                lastSyncTimes[localEntry.relPath] = currentTime;
             }
-            else // if it exists in the remote folder
+            else // if it exists in the remote folder*/
             {
                 SysTime accessTime, modificationTime;
 
                 getTimes(localEntry, accessTime, modificationTime);
                 modificationTime.timezone = utcTimeZone(); // convert from local time to UTC
 
-                auto lastSyncTime = res.front in lastSyncTimes;
-
-                if (lastSyncTime !is null)
+                if (localEntry.isFile)
                 {
-                    // If the file was modified since last run (and it's not a directory), check if an update is needed.
-                    // Directories are modified when their content changes. However, there's no need to do anything here
-                    // because the files that were deleted will be handled.
-                    if (modificationTime > *lastSyncTime && localEntry.isFile)
-                    {
-                        auto entryToMake = to!string(dropboxDirectory().chainPath(localEntry.relPath));
+                    auto entryToMake = to!string(dropboxDirectory().chainPath(localEntry.relPath));
 
+                    // read the notification time of the file in the remote directory.
+                    // if it's older than the local one, replace it.
+                    SysTime remoteAccessTime, remoteModificationTime;
+                    getTimes(entryToMake, remoteAccessTime, remoteModificationTime);
+                    remoteModificationTime.timezone = utcTimeZone(); // convert from local time to UTC
+
+                    if (modificationTime > remoteModificationTime)
+                    {
                         copy(localEntry.name, entryToMake);
+
                         version (Windows)
                             removeReadOnlyAttributes(localEntry.name, entryToMake);
 
-                        info("Updated ", entryToMake);
+                        info("Copied ", localEntry.name);
                     }
                 }
-                else
-                {
-                    if (localEntry.isFile)
-                    {
-                        auto entryToMake = to!string(dropboxDirectory().chainPath(localEntry.relPath));
-                    
-                        // read the notification time of the file in the remote directory.
-                        // if it's older than the local one, replace it.
-                        SysTime remoteAccessTime, remoteModificationTime;
-                        getTimes(entryToMake, remoteAccessTime, remoteModificationTime);
-                        remoteModificationTime.timezone = utcTimeZone(); // convert from local time to UTC
-                
-                        if (modificationTime > remoteModificationTime)
-                        {
-                            copy(localEntry.name, entryToMake);
 
-                            version (Windows)
-                                removeReadOnlyAttributes(localEntry.name, entryToMake);
-
-                            info("Copied ", localEntry.name);
-                        }
-                    }
-
-                    // If localEntry is a directory, it means that it already exists in the remote folder.
-                    // There's nothing to be done in that case.
-                    // This happens when the application starts and a folder is already there.
-                }
-
-                lastSyncTimes[localEntry.relPath] = currentTime;
+                // If localEntry is a directory, it means that it already exists in the remote folder.
+                // There's nothing to be done in that case.
+                // This happens when the application starts and a folder is already there.
             }
         }
         catch (FileException e)
@@ -265,13 +241,16 @@ void syncNewOrUpdatedEntries(SysTime currentTime, Array!MyDirEntry localEntries,
 
 void syncDeleteEntries(SysTime currentTime, Array!MyDirEntry localEntries, Array!MyDirEntry remoteEntries)
 {
-    for (size_t i = 0; i < remoteEntries.length; ++i)
+    bool[string] localEntriesRelativePaths;
+    foreach (localEntry; localEntries)
+        localEntriesRelativePaths[localEntry.relPath] = true;
+
+    foreach (remoteEntry; remoteEntries)
     {
-        auto remoteEntry = remoteEntries[i];
-        auto res = localEntries[].map!(e => e.relPath).find(remoteEntry.relPath);
+        auto res = remoteEntry.relPath in localEntriesRelativePaths;
 
         // if the entry no longer exists
-        if (res.empty)
+        if (res is null)
         {
             if (remoteEntry.exists)
             {
@@ -282,8 +261,6 @@ void syncDeleteEntries(SysTime currentTime, Array!MyDirEntry localEntries, Array
 
                 info("Removed ", remoteEntry.name);
             }
-
-            lastSyncTimes.remove(remoteEntry.relPath);
         }
     }
 }
@@ -303,7 +280,7 @@ void sync(SysTime currentTime)
     info("Sync finished at ", Clock.currTime(utcTimeZone()));
 }
 
-auto lastDirPart(T)(auto ref T t)
+auto lastDirPart(T)(auto ref T t) pure nothrow
 {
     import std.path : pathSplitter;
     import std.array : array;
