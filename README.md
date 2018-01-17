@@ -11,7 +11,7 @@ The application monitors your folders at the beginning of every minute.
 
 ## Build
 ### Requirements
-* [dub](http://minas-mina.com/2015/08/16/installing-dub/)
+* [dub](https://code.dlang.org/getting_started)
 * [DMD v2.070.0+](https://dlang.org/download.html#dmd) (or any other based on 2.070.0+ library)
 
 To build the project, open a terminal inside the project's root directory and execute
